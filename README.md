@@ -6,9 +6,7 @@ This Discord bot provides one administrator-only slash command:
 /track target:<Discord username, user ID, or mention>
 ```
 
-It immediately displays `🔎 Locating...`, then appends the normalized target as a new line in the configured GitHub text file. Duplicate entries are ignored.
-
-> “Locating” is only a progress message. The bot records the supplied identifier; it does not discover or expose anyone's physical location.
+It immediately displays `Setting Target`, replaces the configured GitHub text file with only the normalized target, and then displays `Target Set`.
 
 ## Configuration
 
