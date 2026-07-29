@@ -59,14 +59,12 @@ export function profileConfirmation(profile: RobloxProfile) {
     .setColor(colors.normal)
     .setTitle("Verify Roblox User")
     .setURL(profile.profileUrl)
-    .setDescription(`[Open this profile on Roblox](${profile.profileUrl}) before adding it.`)
     .setThumbnail(profile.imageUrl)
     .addFields(
       { name: "Username", value: profile.username, inline: true },
       { name: "Display Name", value: profile.displayName, inline: true },
       { name: "User ID", value: profile.id, inline: true }
-    )
-    .setFooter({ text: "The user is not added until you press Add." });
+    );
 
   const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
