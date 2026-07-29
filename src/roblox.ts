@@ -31,6 +31,22 @@ type ThumbnailLookupResponse = {
   }>;
 };
 
+const PROFILE_CACHE_MS = 10 * 60 * 1000;
+const profileCache = new Map<string, { expires: number; value: Promise<RobloxProfile> }>();
+
+function cachedProfile(key: string, load: () => Promise<RobloxProfile>) {
+  const cached = profileCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.value;
+
+  let value: Promise<RobloxProfile>;
+  value = load().catch((error) => {
+    if (profileCache.get(key)?.value === value) profileCache.delete(key);
+    throw error;
+  });
+  profileCache.set(key, { expires: Date.now() + PROFILE_CACHE_MS, value });
+  return value;
+}
+
 async function fetchRoblox(url: string, init?: RequestInit) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -73,9 +89,33 @@ async function getAvatarHeadshot(userId: string): Promise<string> {
     const result = await response.json() as ThumbnailLookupResponse;
     const thumbnail = result.data?.[0];
     if (thumbnail?.imageUrl) return thumbnail.imageUrl;
-    if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 500));
+    if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 200));
   }
   throw new Error("Image unavailable.");
+}
+
+function getProfileById(userId: string) {
+  return cachedProfile(`id:${userId}`, async () => {
+    const [profile, imageUrl] = await Promise.all([
+      getById(userId),
+      getAvatarHeadshot(userId)
+    ]);
+    const id = String(profile.id);
+    return {
+      id,
+      username: profile.name,
+      displayName: profile.displayName,
+      profileUrl: `https://www.roblox.com/users/${id}/profile`,
+      imageUrl
+    };
+  });
+}
+
+function getProfileByUsername(username: string, excludeBannedUsers = true) {
+  return cachedProfile(`name:${excludeBannedUsers}:${username}`, async () => {
+    const matched = await getByUsername(username, excludeBannedUsers);
+    return getProfileById(String(matched.id));
+  });
 }
 
 export async function resolveRobloxUser(
@@ -86,30 +126,18 @@ export async function resolveRobloxUser(
   const userId = userIdInput?.trim() || null;
   if (!username && !userId) throw new Error("Enter username or user ID.");
 
-  let profile: RobloxUserResponse;
-  if (userId) {
-    profile = await getById(userId);
-  } else {
-    profile = await getByUsername(username!);
-    profile = await getById(String(profile.id));
-  }
+  const profile = userId
+    ? await getProfileById(userId)
+    : await getProfileByUsername(username!);
 
-  if (username && profile.name !== username) {
-    if (profile.name.toLowerCase() === username.toLowerCase()) {
-      throw new Error(`Use exact username: ${profile.name}`);
+  if (username && profile.username !== username) {
+    if (profile.username.toLowerCase() === username.toLowerCase()) {
+      throw new Error(`Use exact username: ${profile.username}`);
     }
     throw new Error("Username and ID do not match.");
   }
 
-  const id = String(profile.id);
-
-  return {
-    id,
-    username: profile.name,
-    displayName: profile.displayName,
-    profileUrl: `https://www.roblox.com/users/${id}/profile`,
-    imageUrl: await getAvatarHeadshot(id)
-  };
+  return profile;
 }
 
 export async function previewStoredRobloxUser(
@@ -118,7 +146,7 @@ export async function previewStoredRobloxUser(
 ): Promise<StoredRobloxProfile> {
   if (userId) {
     try {
-      const profile = await resolveRobloxUser(null, userId);
+      const profile = await getProfileById(userId);
       return { ...profile, verified: true };
     } catch {
       // Try the stored username independently below.
@@ -126,16 +154,8 @@ export async function previewStoredRobloxUser(
   }
   if (username) {
     try {
-      const matched = await getByUsername(username, false);
-      const profile = await getById(String(matched.id));
-      const id = String(profile.id);
-      return {
-        id,
-        username: profile.name,
-        profileUrl: `https://www.roblox.com/users/${id}/profile`,
-        imageUrl: await getAvatarHeadshot(id),
-        verified: true
-      };
+      const profile = await getProfileByUsername(username, false);
+      return { ...profile, verified: true };
     } catch {
       // Keep the invalid legacy entry visible so it can still be removed.
     }

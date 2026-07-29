@@ -3,6 +3,7 @@ import {
   Events,
   GatewayIntentBits,
   GuildMember,
+  MessageFlags,
   PermissionFlagsBits
 } from "discord.js";
 import { config } from "./config.js";
@@ -19,6 +20,7 @@ import {
   dashboardMessage,
   fullJsonModal,
   homeButtonRow,
+  loadingMessage,
   profileConfirmation,
   statusEmbed
 } from "./dashboard.js";
@@ -59,14 +61,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (!isAllowed(interaction.member)) {
       await interaction.reply({
         embeds: [statusEmbed("Error", "No permission.", "error")],
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return;
     }
 
     if (interaction.isChatInputCommand()) {
       if (interaction.commandName === "users") {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         await interaction.editReply(await dashboardMessage(await getRobloxUsers()));
         return;
       }
@@ -77,6 +79,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isButton()) {
       if (interaction.customId === "users:home") {
         await interaction.deferUpdate();
+        await interaction.editReply(loadingMessage("Users"));
         await interaction.editReply(await dashboardMessage(await getRobloxUsers()));
       } else if (interaction.customId.startsWith("remove:list:")) {
         const page = Number(interaction.customId.split(":")[2]);
@@ -94,15 +97,19 @@ client.on(Events.InteractionCreate, async (interaction) => {
         if (!Number.isInteger(page) || !identity) throw new Error("Invalid selection.");
         const user = decodeRemovalUser(identity);
         await interaction.deferUpdate();
+        await interaction.editReply(loadingMessage("Remove User"));
         const list = await removeExactRobloxUser(user);
         await interaction.editReply(await dashboardMessage(list, "User removed."));
       } else if (interaction.customId.startsWith("users:confirm-add:")) {
         const [, , userId, username] = interaction.customId.split(":");
         if (!userId || !username) throw new Error("Invalid user.");
         await interaction.deferUpdate();
-        const profile = await resolveRobloxUser(username, userId);
-        const list = await addRobloxUser(makeRobloxUser(profile.username, profile.id));
-        await interaction.editReply(await dashboardMessage(list, "User added."));
+        await interaction.editReply(loadingMessage("Add User"));
+        const result = await addRobloxUser(makeRobloxUser(username, userId));
+        await interaction.editReply(await dashboardMessage(
+          result.list,
+          result.added ? "User added." : "User exists."
+        ));
       } else if (interaction.customId === "users:cancel-add") {
         await interaction.deferUpdate();
         await interaction.editReply(await dashboardMessage(await getRobloxUsers(), "Cancelled."));
@@ -110,6 +117,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         await interaction.showModal(addUserModal());
       } else if (interaction.customId === "users:remove") {
         await interaction.deferUpdate();
+        await interaction.editReply(loadingMessage("Remove User"));
         await interaction.editReply(await removalListMessage(await getRobloxUsers()));
       } else if (interaction.customId === "users:json") {
         await interaction.showModal(fullJsonModal(await getRobloxUsers()));
@@ -146,7 +154,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const userId = interaction.fields.getTextInputValue("user_id");
         makeRobloxUser(username, userId);
         if (interaction.isFromMessage()) await interaction.deferUpdate();
-        else await interaction.deferReply({ ephemeral: true });
+        else await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.editReply(loadingMessage("Add User"));
         const profile = await resolveRobloxUser(username, userId);
         await interaction.editReply(profileConfirmation(profile));
       } else if (interaction.customId === "users:json-modal") {
@@ -158,7 +167,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
         const replacement = validateUserList(parsed);
         if (interaction.isFromMessage()) await interaction.deferUpdate();
-        else await interaction.deferReply({ ephemeral: true });
+        else await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.editReply(loadingMessage("Edit JSON"));
         const list = await replaceRobloxUsers(replacement);
         await interaction.editReply(await dashboardMessage(list, "JSON updated."));
       }
@@ -177,7 +187,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     } else if (interaction.isModalSubmit() && interaction.isFromMessage()) {
       await interaction.update(response);
     } else {
-      await interaction.reply({ ...response, ephemeral: true });
+      await interaction.reply({ ...response, flags: MessageFlags.Ephemeral });
     }
   }
 });

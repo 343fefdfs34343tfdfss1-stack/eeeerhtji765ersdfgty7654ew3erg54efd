@@ -1,7 +1,7 @@
 import { Octokit } from "@octokit/rest";
 import { config } from "./config.js";
 
-const github = new Octokit({ auth: config.GITHUB_TOKEN });
+const github = new Octokit({ auth: config.GITHUB_TOKEN, request: { timeout: 8000 } });
 const repository = { owner: config.GITHUB_OWNER, repo: config.GITHUB_REPO };
 
 export type RobloxUser = {
@@ -20,6 +20,10 @@ function isConflict(error: unknown) {
 
 function decodeFile(content: string) {
   return Buffer.from(content.replaceAll("\n", ""), "base64").toString("utf8");
+}
+
+function sameList(left: RobloxUserList, right: RobloxUserList) {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function validateUser(user: unknown, index: number): RobloxUser {
@@ -96,6 +100,7 @@ async function updateUserList(
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const { list, sha } = await readFile();
     const updatedList = validateUserList(change(structuredClone(list)));
+    if (sameList(list, updatedList)) return updatedList;
     const updated = `${JSON.stringify(updatedList, null, 2)}\n`;
 
     try {
@@ -107,23 +112,40 @@ async function updateUserList(
         message,
         content: Buffer.from(updated, "utf8").toString("base64"),
         committer: {
-          name: "Discord GitHub Bot",
-          email: "discord-github-bot@users.noreply.github.com"
+          name: "Roblox Users",
+          email: "roblox-users@users.noreply.local"
         }
       });
       return updatedList;
     } catch (error) {
-      if (!isConflict(error) || attempt === 2) throw error;
+      try {
+        const latest = await readFile();
+        if (sameList(latest.list, updatedList)) return latest.list;
+      } catch {
+        // Keep the original update result.
+      }
+      if (isConflict(error) && attempt < 2) continue;
+      if (isConflict(error)) throw new Error("Update conflict. Try again.");
+      throw new Error("Update failed. Try again.");
     }
   }
   throw new Error("Update conflict. Try again.");
 }
 
-export function addRobloxUser(user: RobloxUser) {
-  return updateUserList(
-    (list) => ({ roblox_users: [...list.roblox_users, user] }),
+export async function addRobloxUser(user: RobloxUser) {
+  let added = false;
+  const list = await updateUserList(
+    (list) => {
+      const exists = list.roblox_users.some((entry) =>
+        (user.roblox_user_id && entry.roblox_user_id === user.roblox_user_id) ||
+        (user.roblox_username && entry.roblox_username?.toLowerCase() === user.roblox_username.toLowerCase())
+      );
+      added = !exists;
+      return exists ? list : { roblox_users: [...list.roblox_users, user] };
+    },
     `Add Roblox user ${user.roblox_username ?? user.roblox_user_id}`
   );
+  return { list, added };
 }
 
 export function removeExactRobloxUser(user: RobloxUser) {

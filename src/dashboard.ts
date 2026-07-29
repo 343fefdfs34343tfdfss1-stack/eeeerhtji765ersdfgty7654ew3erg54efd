@@ -29,6 +29,10 @@ export function statusEmbed(title: string, description: string, tone: StatusTone
     .setDescription(description);
 }
 
+export function loadingMessage(title: string) {
+  return { embeds: [statusEmbed(title, "Loading...")], components: [] };
+}
+
 export function compactUserEmbed(profile: StoredRobloxProfile, position?: number) {
   const author = {
     name: `${position ? `${position}. ` : ""}${profile.username}  •  ID: ${profile.id}`,
