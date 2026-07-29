@@ -8,6 +8,8 @@ This Discord bot provides one administrator-only slash command:
 
 At least one of `username` or `user_id` must be supplied. The bot displays `Adding User`, appends the user object to the `roblox_users` JSON array in the configured GitHub file, and then displays `User Added`.
 
+Run `/users` to open an ephemeral embedded control panel showing the current list. Its buttons support adding, editing, and removing numbered entries, refreshing the display, and editing the complete JSON document in a Discord form. Full-document editing is limited by Discord to 4,000 characters.
+
 ## Configuration
 
 1. Install Node.js 20 or newer.

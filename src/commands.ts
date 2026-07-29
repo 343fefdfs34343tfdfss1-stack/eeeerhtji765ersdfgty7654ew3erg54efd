@@ -24,5 +24,8 @@ export const commands = [
             .setMinLength(1)
             .setMaxLength(20)
         )
-    )
+    ),
+  new SlashCommandBuilder()
+    .setName("users")
+    .setDescription("Open the embedded Roblox user-list editor")
 ].map((command) => command.toJSON());
