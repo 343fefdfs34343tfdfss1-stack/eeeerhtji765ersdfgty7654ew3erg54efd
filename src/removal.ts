@@ -18,6 +18,8 @@ function encodeUser(user: RobloxUser) {
 }
 
 export function decodeRemovalUser(value: string) {
+  const indexedValue = value.match(/^\d+:(.+)$/);
+  if (indexedValue) value = indexedValue[1];
   let decoded: string;
   try {
     decoded = Buffer.from(value, "base64url").toString("utf8");
@@ -72,7 +74,7 @@ export async function removalListMessage(list: RobloxUserList, requestedPage = 0
       new StringSelectMenuOptionBuilder()
         .setLabel(profiles[index].username ?? `User ${start + index + 1}`)
         .setDescription(`User ID: ${profiles[index].id}`)
-        .setValue(encodeUser(user))
+        .setValue(`${start + index}:${encodeUser(user)}`)
     ));
   const selectRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selector);
   const navigation = new ActionRowBuilder<ButtonBuilder>().addComponents(
