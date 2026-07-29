@@ -3,10 +3,10 @@
 This Discord bot provides one administrator-only slash command:
 
 ```text
-/track target:<Discord username, user ID, or mention>
+/add user username:<optional Roblox username> user_id:<optional Roblox user ID>
 ```
 
-It immediately displays `Setting Target`, replaces the configured GitHub text file with only the normalized target, and then displays `Target Set`.
+At least one of `username` or `user_id` must be supplied. The bot displays `Adding User`, appends the user object to the `roblox_users` JSON array in the configured GitHub file, and then displays `User Added`.
 
 ## Configuration
 

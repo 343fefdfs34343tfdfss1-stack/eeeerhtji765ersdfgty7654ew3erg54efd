@@ -2,14 +2,27 @@ import { SlashCommandBuilder } from "discord.js";
 
 export const commands = [
   new SlashCommandBuilder()
-    .setName("track")
-    .setDescription("Add a Discord username or user ID to the GitHub tracking file")
-    .addStringOption((option) =>
-      option
-        .setName("target")
-        .setDescription("Discord username, user ID, or mention")
-        .setRequired(true)
-        .setMinLength(2)
-        .setMaxLength(32)
+    .setName("add")
+    .setDescription("Add an entry to the Roblox user list")
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("user")
+        .setDescription("Add a Roblox user by username, user ID, or both")
+        .addStringOption((option) =>
+          option
+            .setName("username")
+            .setDescription("Roblox username")
+            .setRequired(false)
+            .setMinLength(3)
+            .setMaxLength(20)
+        )
+        .addStringOption((option) =>
+          option
+            .setName("user_id")
+            .setDescription("Roblox numeric user ID")
+            .setRequired(false)
+            .setMinLength(1)
+            .setMaxLength(20)
+        )
     )
 ].map((command) => command.toJSON());

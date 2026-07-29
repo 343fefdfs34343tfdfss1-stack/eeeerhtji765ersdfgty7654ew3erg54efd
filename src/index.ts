@@ -6,8 +6,8 @@ import {
   PermissionFlagsBits
 } from "discord.js";
 import { config } from "./config.js";
-import { setTrackedTarget } from "./github.js";
-import { normalizeTarget } from "./target.js";
+import { addRobloxUser } from "./github.js";
+import { makeRobloxUser } from "./target.js";
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -32,13 +32,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    if (interaction.commandName !== "track") return;
+    if (interaction.commandName !== "add" || interaction.options.getSubcommand() !== "user") return;
 
-    const target = normalizeTarget(interaction.options.getString("target", true));
-    await interaction.reply({ content: "Setting Target", ephemeral: true });
+    const user = makeRobloxUser(
+      interaction.options.getString("username"),
+      interaction.options.getString("user_id")
+    );
+    await interaction.reply({ content: "Adding User", ephemeral: true });
 
-    await setTrackedTarget(target);
-    await interaction.editReply("Target Set");
+    await addRobloxUser(user);
+    await interaction.editReply("User Added");
   } catch (error) {
     console.error(error);
     const message = error instanceof Error ? error.message : "Unknown error";

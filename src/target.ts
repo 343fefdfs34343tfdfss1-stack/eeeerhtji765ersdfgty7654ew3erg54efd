@@ -1,10 +1,21 @@
-export function normalizeTarget(value: string) {
-  const trimmed = value.trim();
-  const mention = trimmed.match(/^<@!?(\d{17,20})>$/);
-  if (mention) return mention[1];
-  if (/^\d{17,20}$/.test(trimmed)) return trimmed;
+import type { RobloxUser } from "./github.js";
 
-  const username = trimmed.replace(/^@/, "");
-  if (/^[a-zA-Z0-9._]{2,32}$/.test(username)) return username;
-  throw new Error("Enter a valid Discord username, user ID, or mention.");
+export function makeRobloxUser(usernameInput: string | null, userIdInput: string | null): RobloxUser {
+  const username = usernameInput?.trim();
+  const userId = userIdInput?.trim();
+
+  if (!username && !userId) {
+    throw new Error("Enter a username, a user ID, or both.");
+  }
+  if (username && !/^[A-Za-z0-9_]{3,20}$/.test(username)) {
+    throw new Error("Enter a valid Roblox username.");
+  }
+  if (userId && !/^\d{1,20}$/.test(userId)) {
+    throw new Error("Enter a valid numeric Roblox user ID.");
+  }
+
+  return {
+    ...(userId ? { roblox_user_id: userId } : {}),
+    ...(username ? { roblox_username: username } : {})
+  };
 }
