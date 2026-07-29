@@ -8,7 +8,7 @@ This Discord bot provides one administrator-only slash command:
 
 At least one of `username` or `user_id` must be supplied. The bot displays `Adding User`, appends the user object to the `roblox_users` JSON array in the configured GitHub file, and then displays `User Added`.
 
-Run `/users` to open an ephemeral embedded control panel using the same compact, linked avatar boxes and pagination as `/remove user`. Its buttons support adding, editing, and removing numbered entries, refreshing the display, and editing the complete JSON document in a Discord form. Full-document editing is limited by Discord to 4,000 characters.
+Run `/users` to open an ephemeral embedded control panel using the same compact, linked avatar boxes and pagination as `/remove user`. **Add User** uses the verified Roblox profile preview with Add/Cancel, and **Remove User** opens the same avatar list, dropdown, and Remove/Cancel flow as `/remove user`. The panel also supports refreshing and editing the complete JSON document. Full-document editing is limited by Discord to 4,000 characters.
 
 Run `/remove user` to open a compact, paginated removal list. Each equal-sized entry uses the stored user ID first and then the username to resolve the Roblox avatar and a hyperlinked username/ID line. Legacy username casing is canonicalized for display, while `/add user` remains strictly case-sensitive. Choose a user from the dropdown, then press **Remove** or **Cancel**.
 

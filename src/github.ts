@@ -126,22 +126,6 @@ export function addRobloxUser(user: RobloxUser) {
   );
 }
 
-export function editRobloxUser(index: number, user: RobloxUser) {
-  return updateUserList((list) => {
-    if (!list.roblox_users[index]) throw new Error("That entry number does not exist.");
-    list.roblox_users[index] = user;
-    return list;
-  }, `Edit Roblox user entry ${index + 1}`);
-}
-
-export function removeRobloxUser(index: number) {
-  return updateUserList((list) => {
-    if (!list.roblox_users[index]) throw new Error("That entry number does not exist.");
-    list.roblox_users.splice(index, 1);
-    return list;
-  }, `Remove Roblox user entry ${index + 1}`);
-}
-
 export function removeExactRobloxUser(user: RobloxUser) {
   return updateUserList((list) => {
     const index = list.roblox_users.findIndex((entry) =>

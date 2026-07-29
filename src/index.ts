@@ -8,9 +8,7 @@ import {
 import { config } from "./config.js";
 import {
   addRobloxUser,
-  editRobloxUser,
   getRobloxUsers,
-  removeRobloxUser,
   removeExactRobloxUser,
   replaceRobloxUsers,
   validateUserList
@@ -19,10 +17,8 @@ import { makeRobloxUser } from "./target.js";
 import {
   addUserModal,
   dashboardMessage,
-  editUserModal,
   fullJsonModal,
   profileConfirmation,
-  removeUserModal,
   statusEmbed
 } from "./dashboard.js";
 import { resolveRobloxUser } from "./roblox.js";
@@ -37,12 +33,6 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 function isAllowed(member: GuildMember) {
   if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
   return member.roles.cache.some((role) => config.allowedRoleIds.has(role.id));
-}
-
-function entryIndex(value: string) {
-  const trimmed = value.trim();
-  if (!/^[1-9]\d*$/.test(trimmed)) throw new Error("Enter a valid entry number from the list.");
-  return Number(trimmed) - 1;
 }
 
 client.once(Events.ClientReady, (readyClient) => {
@@ -121,10 +111,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         });
       } else if (interaction.customId === "users:add") {
         await interaction.showModal(addUserModal());
-      } else if (interaction.customId === "users:edit") {
-        await interaction.showModal(editUserModal());
       } else if (interaction.customId === "users:remove") {
-        await interaction.showModal(removeUserModal());
+        await interaction.deferUpdate();
+        await interaction.editReply(await removalListMessage(await getRobloxUsers()));
       } else if (interaction.customId === "users:json") {
         await interaction.showModal(fullJsonModal(await getRobloxUsers()));
       } else if (interaction.customId.startsWith("users:page:")) {
@@ -162,20 +151,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
         await interaction.deferReply({ ephemeral: true });
         const profile = await resolveRobloxUser(username, userId);
         await interaction.editReply(profileConfirmation(profile));
-      } else if (interaction.customId === "users:edit-modal") {
-        const index = entryIndex(interaction.fields.getTextInputValue("entry"));
-        const user = makeRobloxUser(
-          interaction.fields.getTextInputValue("username"),
-          interaction.fields.getTextInputValue("user_id")
-        );
-        await interaction.deferReply({ ephemeral: true });
-        const list = await editRobloxUser(index, user);
-        await interaction.editReply(await dashboardMessage(list, `Entry ${index + 1} updated successfully.`));
-      } else if (interaction.customId === "users:remove-modal") {
-        const index = entryIndex(interaction.fields.getTextInputValue("entry"));
-        await interaction.deferReply({ ephemeral: true });
-        const list = await removeRobloxUser(index);
-        await interaction.editReply(await dashboardMessage(list, `Entry ${index + 1} removed successfully.`));
       } else if (interaction.customId === "users:json-modal") {
         let parsed: unknown;
         try {

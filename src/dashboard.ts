@@ -48,7 +48,6 @@ export async function dashboardMessage(list: RobloxUserList, notice?: string, re
 
   const primary = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder().setCustomId("users:add").setLabel("Add User").setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId("users:edit").setLabel("Edit User").setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId("users:remove").setLabel("Remove User").setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId("users:json").setLabel("Edit Full JSON").setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`users:refresh:${page}`).setLabel("Refresh").setStyle(ButtonStyle.Secondary)
@@ -124,24 +123,6 @@ export function addUserModal() {
       input("username", "Username (optional)", false, "chrisone"),
       input("user_id", "User ID (optional)", false, "302098")
     );
-}
-
-export function editUserModal() {
-  return new ModalBuilder()
-    .setCustomId("users:edit-modal")
-    .setTitle("Edit Roblox User")
-    .addComponents(
-      input("entry", "Entry number", true, "1"),
-      input("username", "New username (optional)", false, "Leave blank to omit"),
-      input("user_id", "New user ID (optional)", false, "Leave blank to omit")
-    );
-}
-
-export function removeUserModal() {
-  return new ModalBuilder()
-    .setCustomId("users:remove-modal")
-    .setTitle("Remove Roblox User")
-    .addComponents(input("entry", "Entry number to remove", true, "1"));
 }
 
 export function fullJsonModal(list: RobloxUserList) {
