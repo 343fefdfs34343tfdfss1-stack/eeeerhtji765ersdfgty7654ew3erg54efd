@@ -6,6 +6,14 @@ export type RobloxProfile = {
   imageUrl: string;
 };
 
+export type StoredRobloxProfile = {
+  id: string;
+  username: string;
+  profileUrl?: string;
+  imageUrl?: string;
+  verified: boolean;
+};
+
 type RobloxUserResponse = {
   id: number;
   name: string;
@@ -102,4 +110,21 @@ export async function resolveRobloxUser(
     profileUrl: `https://www.roblox.com/users/${id}/profile`,
     imageUrl: await getAvatarHeadshot(id)
   };
+}
+
+export async function previewStoredRobloxUser(
+  username: string | undefined,
+  userId: string | undefined
+): Promise<StoredRobloxProfile> {
+  try {
+    const profile = await resolveRobloxUser(username ?? null, userId ?? null);
+    return { ...profile, verified: true };
+  } catch {
+    return {
+      id: userId ?? "Unknown",
+      username: username ?? "Unknown",
+      ...(userId ? { profileUrl: `https://www.roblox.com/users/${userId}/profile` } : {}),
+      verified: false
+    };
+  }
 }

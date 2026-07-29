@@ -11,6 +11,7 @@ import {
   editRobloxUser,
   getRobloxUsers,
   removeRobloxUser,
+  removeExactRobloxUser,
   replaceRobloxUsers,
   validateUserList
 } from "./github.js";
@@ -25,6 +26,11 @@ import {
   statusEmbed
 } from "./dashboard.js";
 import { resolveRobloxUser } from "./roblox.js";
+import {
+  decodeRemovalUser,
+  removalConfirmation,
+  removalListMessage
+} from "./removal.js";
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -62,6 +68,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
         return;
       }
 
+      if (interaction.commandName === "remove" && interaction.options.getSubcommand() === "user") {
+        await interaction.deferReply({ ephemeral: true });
+        await interaction.editReply(await removalListMessage(await getRobloxUsers()));
+        return;
+      }
+
       if (interaction.commandName === "add" && interaction.options.getSubcommand() === "user") {
         const username = interaction.options.getString("username");
         const userId = interaction.options.getString("user_id");
@@ -77,7 +89,25 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     if (interaction.isButton()) {
-      if (interaction.customId.startsWith("users:confirm-add:")) {
+      if (interaction.customId.startsWith("remove:list:")) {
+        const page = Number(interaction.customId.split(":")[2]);
+        if (!Number.isInteger(page)) throw new Error("That list page is invalid.");
+        await interaction.deferUpdate();
+        await interaction.editReply(await removalListMessage(await getRobloxUsers(), page));
+      } else if (interaction.customId.startsWith("remove:cancel:")) {
+        const page = Number(interaction.customId.split(":")[2]);
+        if (!Number.isInteger(page)) throw new Error("That list page is invalid.");
+        await interaction.deferUpdate();
+        await interaction.editReply(await removalListMessage(await getRobloxUsers(), page));
+      } else if (interaction.customId.startsWith("remove:confirm:")) {
+        const [, , pageValue, identity] = interaction.customId.split(":");
+        const page = Number(pageValue);
+        if (!Number.isInteger(page) || !identity) throw new Error("That removal confirmation is invalid.");
+        const user = decodeRemovalUser(identity);
+        await interaction.deferUpdate();
+        const list = await removeExactRobloxUser(user);
+        await interaction.editReply(await removalListMessage(list, page, "User removed successfully."));
+      } else if (interaction.customId.startsWith("users:confirm-add:")) {
         const [, , userId, username] = interaction.customId.split(":");
         if (!userId || !username) throw new Error("This confirmation is invalid. Start again.");
         await interaction.deferUpdate();
@@ -100,6 +130,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
       } else if (interaction.customId === "users:refresh") {
         await interaction.deferUpdate();
         await interaction.editReply(dashboardMessage(await getRobloxUsers(), "List refreshed."));
+      }
+      return;
+    }
+
+    if (interaction.isStringSelectMenu()) {
+      if (interaction.customId.startsWith("remove:select:")) {
+        const page = Number(interaction.customId.split(":")[2]);
+        if (!Number.isInteger(page)) throw new Error("That removal selection is invalid.");
+        const user = decodeRemovalUser(interaction.values[0]);
+        await interaction.deferUpdate();
+        await interaction.editReply(await removalConfirmation(user, page));
       }
       return;
     }

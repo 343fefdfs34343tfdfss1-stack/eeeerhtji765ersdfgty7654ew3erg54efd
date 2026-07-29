@@ -27,5 +27,13 @@ export const commands = [
     ),
   new SlashCommandBuilder()
     .setName("users")
-    .setDescription("Open the embedded Roblox user-list editor")
+    .setDescription("Open the embedded Roblox user-list editor"),
+  new SlashCommandBuilder()
+    .setName("remove")
+    .setDescription("Remove an entry from the Roblox user list")
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("user")
+        .setDescription("Show the compact Roblox user removal list")
+    )
 ].map((command) => command.toJSON());

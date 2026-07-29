@@ -142,6 +142,18 @@ export function removeRobloxUser(index: number) {
   }, `Remove Roblox user entry ${index + 1}`);
 }
 
+export function removeExactRobloxUser(user: RobloxUser) {
+  return updateUserList((list) => {
+    const index = list.roblox_users.findIndex((entry) =>
+      entry.roblox_user_id === user.roblox_user_id &&
+      entry.roblox_username === user.roblox_username
+    );
+    if (index === -1) throw new Error("That user is no longer in the JSON list.");
+    list.roblox_users.splice(index, 1);
+    return list;
+  }, `Remove Roblox user ${user.roblox_username ?? user.roblox_user_id}`);
+}
+
 export function replaceRobloxUsers(list: RobloxUserList) {
   return updateUserList(() => list, "Edit complete Roblox user JSON list");
 }
