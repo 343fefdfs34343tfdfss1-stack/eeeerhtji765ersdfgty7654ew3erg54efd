@@ -65,17 +65,13 @@ export function profileConfirmation(profile: RobloxProfile) {
       { name: "Display Name", value: profile.displayName, inline: true },
       { name: "User ID", value: profile.id, inline: true }
     )
-    .setFooter({ text: "The user is not added until you press Confirm Add." });
+    .setFooter({ text: "The user is not added until you press Add." });
 
   const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`users:confirm-add:${profile.id}:${profile.username}`)
-      .setLabel("Confirm Add")
+      .setLabel("Add")
       .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setLabel("Open Roblox Profile")
-      .setStyle(ButtonStyle.Link)
-      .setURL(profile.profileUrl),
     new ButtonBuilder()
       .setCustomId("users:cancel-add")
       .setLabel("Cancel")
