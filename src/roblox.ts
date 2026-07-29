@@ -52,11 +52,11 @@ async function getById(userId: string): Promise<RobloxUserResponse> {
   return response.json() as Promise<RobloxUserResponse>;
 }
 
-async function getByUsername(username: string): Promise<RobloxUserResponse> {
+async function getByUsername(username: string, excludeBannedUsers = true): Promise<RobloxUserResponse> {
   const response = await fetchRoblox("https://users.roblox.com/v1/usernames/users", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ usernames: [username], excludeBannedUsers: true })
+    body: JSON.stringify({ usernames: [username], excludeBannedUsers })
   });
   if (!response.ok) throw new Error("Roblox could not verify that username. Try again in a moment.");
   const result = await response.json() as UsernameLookupResponse;
@@ -72,7 +72,7 @@ async function getAvatarHeadshot(userId: string): Promise<string> {
     if (!response.ok) throw new Error("Roblox could not load that profile image.");
     const result = await response.json() as ThumbnailLookupResponse;
     const thumbnail = result.data?.[0];
-    if (thumbnail?.state === "Completed" && thumbnail.imageUrl) return thumbnail.imageUrl;
+    if (thumbnail?.imageUrl) return thumbnail.imageUrl;
     if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error("Roblox could not load that profile image. Try again in a moment.");
@@ -126,8 +126,16 @@ export async function previewStoredRobloxUser(
   }
   if (username) {
     try {
-      const profile = await resolveRobloxUser(username, null);
-      return { ...profile, verified: true };
+      const matched = await getByUsername(username, false);
+      const profile = await getById(String(matched.id));
+      const id = String(profile.id);
+      return {
+        id,
+        username: profile.name,
+        profileUrl: `https://www.roblox.com/users/${id}/profile`,
+        imageUrl: await getAvatarHeadshot(id),
+        verified: true
+      };
     } catch {
       // Keep the invalid legacy entry visible so it can still be removed.
     }
