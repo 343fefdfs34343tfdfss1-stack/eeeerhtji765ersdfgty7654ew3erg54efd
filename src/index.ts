@@ -133,7 +133,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const username = interaction.fields.getTextInputValue("username");
         const userId = interaction.fields.getTextInputValue("user_id");
         makeRobloxUser(username, userId);
-        await interaction.deferReply({ ephemeral: true });
+        if (interaction.isFromMessage()) await interaction.deferUpdate();
+        else await interaction.deferReply({ ephemeral: true });
         const profile = await resolveRobloxUser(username, userId);
         await interaction.editReply(profileConfirmation(profile));
       } else if (interaction.customId === "users:json-modal") {
@@ -144,7 +145,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
           throw new Error("The submitted text is not valid JSON.");
         }
         const replacement = validateUserList(parsed);
-        await interaction.deferReply({ ephemeral: true });
+        if (interaction.isFromMessage()) await interaction.deferUpdate();
+        else await interaction.deferReply({ ephemeral: true });
         const list = await replaceRobloxUsers(replacement);
         await interaction.editReply(await dashboardMessage(list, "Complete JSON updated successfully."));
       }
@@ -156,8 +158,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
       embeds: [statusEmbed("Unable to Update List", message.slice(0, 3900), true)],
       components: [homeButtonRow()]
     };
-    if (interaction.replied || interaction.deferred) await interaction.editReply(response);
-    else await interaction.reply({ ...response, ephemeral: true });
+    if (interaction.replied || interaction.deferred) {
+      await interaction.editReply(response);
+    } else if (interaction.isMessageComponent()) {
+      await interaction.update(response);
+    } else if (interaction.isModalSubmit() && interaction.isFromMessage()) {
+      await interaction.update(response);
+    } else {
+      await interaction.reply({ ...response, ephemeral: true });
+    }
   }
 });
 

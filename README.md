@@ -6,7 +6,7 @@ This Discord bot provides one administrator-only slash command:
 /users
 ```
 
-All user management starts from the embedded `/users` panel. No separate add or remove slash commands are registered. Add cancellation and successful removal return to the main panel, while removal screens and workflow errors include **Back to Users**.
+All user management starts from the embedded `/users` panel. No separate add or remove slash commands are registered. The workflow continuously replaces the same ephemeral message, so old panels are not left behind. Add cancellation and successful removal return to the main panel, while removal screens and workflow errors include **Back to Users**.
 
 Run `/users` to open an ephemeral embedded control panel with compact, linked avatar boxes and pagination. **Add User** uses the verified Roblox profile preview with Add/Cancel, and **Remove User** opens the avatar list, dropdown, and Remove/Cancel flow. The panel also supports refreshing and editing the complete JSON document. Full-document editing is limited by Discord to 4,000 characters.
 
