@@ -8,7 +8,11 @@ import {
   TextInputStyle
 } from "discord.js";
 import type { RobloxUserList } from "./github.js";
-import { previewStoredRobloxUser, type RobloxProfile } from "./roblox.js";
+import {
+  previewStoredRobloxUser,
+  type RobloxProfile,
+  type StoredRobloxProfile
+} from "./roblox.js";
 
 const colors = {
   normal: 0x5865f2,
@@ -16,11 +20,24 @@ const colors = {
   error: 0xed4245
 };
 
-export function statusEmbed(title: string, description: string, error = false) {
+type StatusTone = "info" | "success" | "error";
+
+export function statusEmbed(title: string, description: string, tone: StatusTone = "info") {
   return new EmbedBuilder()
-    .setColor(error ? colors.error : colors.success)
+    .setColor(colors[tone === "info" ? "normal" : tone])
     .setTitle(title)
     .setDescription(description);
+}
+
+export function compactUserEmbed(profile: StoredRobloxProfile, position?: number) {
+  const author = {
+    name: `${position ? `${position}. ` : ""}${profile.username}  •  ID: ${profile.id}`,
+    ...(profile.imageUrl ? { iconURL: profile.imageUrl } : {}),
+    ...(profile.profileUrl ? { url: profile.profileUrl } : {})
+  };
+  return new EmbedBuilder()
+    .setColor(profile.verified ? colors.normal : colors.error)
+    .setAuthor(author);
 }
 
 export function homeButtonRow() {
@@ -41,24 +58,20 @@ export async function dashboardMessage(list: RobloxUserList, notice?: string, re
   const profiles = await Promise.all(users.map((user) =>
     previewStoredRobloxUser(user.roblox_username, user.roblox_user_id)
   ));
-  const embeds = profiles.map((profile, index) => {
-    const author = {
-      name: `${start + index + 1}. ${profile.username}  •  User ID: ${profile.id}`,
-      ...(profile.imageUrl ? { iconURL: profile.imageUrl } : {}),
-      ...(profile.profileUrl ? { url: profile.profileUrl } : {})
-    };
-    return new EmbedBuilder()
-      .setColor(profile.verified ? colors.normal : colors.error)
-      .setAuthor(author);
-  });
+  const embeds = profiles.map((profile, index) => compactUserEmbed(profile, start + index + 1));
+  if (notice) embeds.forEach((embed) => embed.setFooter({ text: notice }));
   if (embeds.length === 0) {
-    embeds.push(statusEmbed("Roblox User List", notice ?? "No Roblox users have been added yet."));
+    embeds.push(statusEmbed(
+      "Roblox Users",
+      notice ?? "No users.",
+      notice ? "success" : "info"
+    ));
   }
 
   const primary = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder().setCustomId("users:add").setLabel("Add User").setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId("users:remove").setLabel("Remove User").setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId("users:json").setLabel("Edit Full JSON").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId("users:json").setLabel("Edit JSON").setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`users:refresh:${page}`).setLabel("Refresh").setStyle(ButtonStyle.Secondary)
   );
   const navigation = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -69,7 +82,7 @@ export async function dashboardMessage(list: RobloxUserList, notice?: string, re
       .setDisabled(page === 0),
     new ButtonBuilder()
       .setCustomId(`users:page:${page}`)
-      .setLabel(`${notice ? `${notice} • ` : ""}Page ${page + 1}/${pageCount}`.slice(0, 80))
+      .setLabel(`Page ${page + 1} / ${pageCount}`)
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(true),
     new ButtonBuilder()
@@ -83,16 +96,14 @@ export async function dashboardMessage(list: RobloxUserList, notice?: string, re
 }
 
 export function profileConfirmation(profile: RobloxProfile) {
-  const embed = new EmbedBuilder()
-    .setColor(colors.normal)
-    .setTitle("Verify Roblox User")
-    .setURL(profile.profileUrl)
-    .setThumbnail(profile.imageUrl)
-    .addFields(
-      { name: "Username", value: profile.username, inline: true },
-      { name: "Display Name", value: profile.displayName, inline: true },
-      { name: "User ID", value: profile.id, inline: true }
-    );
+  const embed = compactUserEmbed({
+    id: profile.id,
+    username: profile.username,
+    profileUrl: profile.profileUrl,
+    imageUrl: profile.imageUrl,
+    verified: true
+  })
+    .setTitle("Add User");
 
   const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
@@ -127,27 +138,27 @@ function input(
 export function addUserModal() {
   return new ModalBuilder()
     .setCustomId("users:add-modal")
-    .setTitle("Add Roblox User")
+    .setTitle("Add User")
     .addComponents(
-      input("username", "Username (optional)", false, "chrisone"),
-      input("user_id", "User ID (optional)", false, "302098")
+      input("username", "Roblox username (optional)", false, "builderman"),
+      input("user_id", "Roblox user ID (optional)", false, "156")
     );
 }
 
 export function fullJsonModal(list: RobloxUserList) {
   const json = JSON.stringify(list, null, 2);
   if (json.length > 4000) {
-    throw new Error("The JSON is too large for Discord's 4,000-character form limit.");
+    throw new Error("JSON too large.");
   }
   const jsonInput = new TextInputBuilder()
     .setCustomId("json")
-    .setLabel("Complete JSON")
+    .setLabel("JSON")
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true)
     .setMaxLength(4000)
     .setValue(json);
   return new ModalBuilder()
     .setCustomId("users:json-modal")
-    .setTitle("Edit Full Roblox User JSON")
+    .setTitle("Edit JSON")
     .addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(jsonInput));
 }

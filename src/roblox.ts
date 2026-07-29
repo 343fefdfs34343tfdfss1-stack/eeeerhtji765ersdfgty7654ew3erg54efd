@@ -38,7 +38,7 @@ async function fetchRoblox(url: string, init?: RequestInit) {
   try {
     response = await fetch(url, { ...init, signal: controller.signal });
   } catch {
-    throw new Error("Roblox could not be reached. Try again in a moment.");
+    throw new Error("Try again.");
   } finally {
     clearTimeout(timeout);
   }
@@ -47,8 +47,8 @@ async function fetchRoblox(url: string, init?: RequestInit) {
 
 async function getById(userId: string): Promise<RobloxUserResponse> {
   const response = await fetchRoblox(`https://users.roblox.com/v1/users/${userId}`);
-  if (response.status === 404) throw new Error("That user ID does not link to a Roblox profile.");
-  if (!response.ok) throw new Error("Roblox could not verify that user ID. Try again in a moment.");
+  if (response.status === 404) throw new Error("User not found.");
+  if (!response.ok) throw new Error("Try again.");
   return response.json() as Promise<RobloxUserResponse>;
 }
 
@@ -58,10 +58,10 @@ async function getByUsername(username: string, excludeBannedUsers = true): Promi
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ usernames: [username], excludeBannedUsers })
   });
-  if (!response.ok) throw new Error("Roblox could not verify that username. Try again in a moment.");
+  if (!response.ok) throw new Error("Try again.");
   const result = await response.json() as UsernameLookupResponse;
   const user = result.data?.[0];
-  if (!user) throw new Error("That username does not link to a Roblox profile.");
+  if (!user) throw new Error("User not found.");
   return user;
 }
 
@@ -69,13 +69,13 @@ async function getAvatarHeadshot(userId: string): Promise<string> {
   const url = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=420x420&format=Png&isCircular=false`;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const response = await fetchRoblox(url);
-    if (!response.ok) throw new Error("Roblox could not load that profile image.");
+    if (!response.ok) throw new Error("Image unavailable.");
     const result = await response.json() as ThumbnailLookupResponse;
     const thumbnail = result.data?.[0];
     if (thumbnail?.imageUrl) return thumbnail.imageUrl;
     if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error("Roblox could not load that profile image. Try again in a moment.");
+  throw new Error("Image unavailable.");
 }
 
 export async function resolveRobloxUser(
@@ -84,7 +84,7 @@ export async function resolveRobloxUser(
 ): Promise<RobloxProfile> {
   const username = usernameInput?.trim() || null;
   const userId = userIdInput?.trim() || null;
-  if (!username && !userId) throw new Error("Enter a username, a user ID, or both.");
+  if (!username && !userId) throw new Error("Enter username or user ID.");
 
   let profile: RobloxUserResponse;
   if (userId) {
@@ -96,9 +96,9 @@ export async function resolveRobloxUser(
 
   if (username && profile.name !== username) {
     if (profile.name.toLowerCase() === username.toLowerCase()) {
-      throw new Error(`Username capitalization must exactly match Roblox: ${profile.name}`);
+      throw new Error(`Use exact username: ${profile.name}`);
     }
-    throw new Error("The username and user ID belong to different Roblox profiles.");
+    throw new Error("Username and ID do not match.");
   }
 
   const id = String(profile.id);

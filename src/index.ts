@@ -36,6 +36,18 @@ function isAllowed(member: GuildMember) {
   return member.roles.cache.some((role) => config.allowedRoleIds.has(role.id));
 }
 
+function errorMessage(error: unknown) {
+  if (!(error instanceof Error)) return "Try again.";
+  const message = error.message.trim();
+  if (
+    !message ||
+    message.length > 120 ||
+    message.includes("\n") ||
+    /DiscordAPIError|HttpError|Invalid Form Body|GitHub/i.test(message)
+  ) return "Try again.";
+  return message;
+}
+
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Logged in as ${readyClient.user.tag}`);
 });
@@ -46,7 +58,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   try {
     if (!isAllowed(interaction.member)) {
       await interaction.reply({
-        embeds: [statusEmbed("Permission Denied", "You do not have permission to edit this list.", true)],
+        embeds: [statusEmbed("Error", "No permission.", "error")],
         ephemeral: true
       });
       return;
@@ -68,32 +80,32 @@ client.on(Events.InteractionCreate, async (interaction) => {
         await interaction.editReply(await dashboardMessage(await getRobloxUsers()));
       } else if (interaction.customId.startsWith("remove:list:")) {
         const page = Number(interaction.customId.split(":")[2]);
-        if (!Number.isInteger(page)) throw new Error("That list page is invalid.");
+        if (!Number.isInteger(page)) throw new Error("Invalid page.");
         await interaction.deferUpdate();
         await interaction.editReply(await removalListMessage(await getRobloxUsers(), page));
       } else if (interaction.customId.startsWith("remove:cancel:")) {
         const page = Number(interaction.customId.split(":")[2]);
-        if (!Number.isInteger(page)) throw new Error("That list page is invalid.");
+        if (!Number.isInteger(page)) throw new Error("Invalid page.");
         await interaction.deferUpdate();
         await interaction.editReply(await removalListMessage(await getRobloxUsers(), page));
       } else if (interaction.customId.startsWith("remove:confirm:")) {
         const [, , pageValue, identity] = interaction.customId.split(":");
         const page = Number(pageValue);
-        if (!Number.isInteger(page) || !identity) throw new Error("That removal confirmation is invalid.");
+        if (!Number.isInteger(page) || !identity) throw new Error("Invalid selection.");
         const user = decodeRemovalUser(identity);
         await interaction.deferUpdate();
         const list = await removeExactRobloxUser(user);
-        await interaction.editReply(await dashboardMessage(list, "User removed successfully."));
+        await interaction.editReply(await dashboardMessage(list, "User removed."));
       } else if (interaction.customId.startsWith("users:confirm-add:")) {
         const [, , userId, username] = interaction.customId.split(":");
-        if (!userId || !username) throw new Error("This confirmation is invalid. Start again.");
+        if (!userId || !username) throw new Error("Invalid user.");
         await interaction.deferUpdate();
         const profile = await resolveRobloxUser(username, userId);
         const list = await addRobloxUser(makeRobloxUser(profile.username, profile.id));
-        await interaction.editReply(await dashboardMessage(list, "Verified Roblox user added successfully."));
+        await interaction.editReply(await dashboardMessage(list, "User added."));
       } else if (interaction.customId === "users:cancel-add") {
         await interaction.deferUpdate();
-        await interaction.editReply(await dashboardMessage(await getRobloxUsers(), "Add cancelled."));
+        await interaction.editReply(await dashboardMessage(await getRobloxUsers(), "Cancelled."));
       } else if (interaction.customId === "users:add") {
         await interaction.showModal(addUserModal());
       } else if (interaction.customId === "users:remove") {
@@ -103,14 +115,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
         await interaction.showModal(fullJsonModal(await getRobloxUsers()));
       } else if (interaction.customId.startsWith("users:page:")) {
         const page = Number(interaction.customId.split(":")[2]);
-        if (!Number.isInteger(page)) throw new Error("That list page is invalid.");
+        if (!Number.isInteger(page)) throw new Error("Invalid page.");
         await interaction.deferUpdate();
         await interaction.editReply(await dashboardMessage(await getRobloxUsers(), undefined, page));
       } else if (interaction.customId.startsWith("users:refresh:")) {
         const page = Number(interaction.customId.split(":")[2]);
-        if (!Number.isInteger(page)) throw new Error("That list page is invalid.");
+        if (!Number.isInteger(page)) throw new Error("Invalid page.");
         await interaction.deferUpdate();
-        await interaction.editReply(await dashboardMessage(await getRobloxUsers(), "List refreshed.", page));
+        await interaction.editReply(await dashboardMessage(await getRobloxUsers(), "Refreshed.", page));
       }
       return;
     }
@@ -118,7 +130,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isStringSelectMenu()) {
       if (interaction.customId.startsWith("remove:select:")) {
         const page = Number(interaction.customId.split(":")[2]);
-        if (!Number.isInteger(page)) throw new Error("That removal selection is invalid.");
+        if (!Number.isInteger(page)) throw new Error("Invalid selection.");
         const user = decodeRemovalUser(interaction.values[0]);
         await interaction.deferUpdate();
         await interaction.editReply(await removalConfirmation(user, page));
@@ -142,20 +154,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
         try {
           parsed = JSON.parse(interaction.fields.getTextInputValue("json"));
         } catch {
-          throw new Error("The submitted text is not valid JSON.");
+          throw new Error("Invalid JSON.");
         }
         const replacement = validateUserList(parsed);
         if (interaction.isFromMessage()) await interaction.deferUpdate();
         else await interaction.deferReply({ ephemeral: true });
         const list = await replaceRobloxUsers(replacement);
-        await interaction.editReply(await dashboardMessage(list, "Complete JSON updated successfully."));
+        await interaction.editReply(await dashboardMessage(list, "JSON updated."));
       }
     }
   } catch (error) {
     console.error(error);
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = errorMessage(error);
     const response = {
-      embeds: [statusEmbed("Unable to Update List", message.slice(0, 3900), true)],
+      embeds: [statusEmbed("Error", message.slice(0, 3900), "error")],
       components: [homeButtonRow()]
     };
     if (interaction.replied || interaction.deferred) {

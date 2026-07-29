@@ -24,23 +24,23 @@ function decodeFile(content: string) {
 
 function validateUser(user: unknown, index: number): RobloxUser {
   if (typeof user !== "object" || user === null || Array.isArray(user)) {
-    throw new Error(`Entry ${index + 1} must be a JSON object.`);
+    throw new Error(`Invalid entry ${index + 1}.`);
   }
 
   const item = user as Record<string, unknown>;
   const username = item.roblox_username;
   const userId = item.roblox_user_id;
   if (username === undefined && userId === undefined) {
-    throw new Error(`Entry ${index + 1} needs a username, a user ID, or both.`);
+    throw new Error(`Entry ${index + 1} needs a username or ID.`);
   }
   if (username !== undefined && (typeof username !== "string" || !/^[A-Za-z0-9_]{3,20}$/.test(username))) {
-    throw new Error(`Entry ${index + 1} has an invalid Roblox username.`);
+    throw new Error(`Invalid username in entry ${index + 1}.`);
   }
   if (userId !== undefined && (typeof userId !== "string" || !/^\d{1,20}$/.test(userId))) {
-    throw new Error(`Entry ${index + 1} has an invalid Roblox user ID.`);
+    throw new Error(`Invalid ID in entry ${index + 1}.`);
   }
   if (Object.keys(item).some((key) => key !== "roblox_username" && key !== "roblox_user_id")) {
-    throw new Error(`Entry ${index + 1} contains an unsupported field.`);
+    throw new Error(`Invalid field in entry ${index + 1}.`);
   }
 
   return {
@@ -51,14 +51,14 @@ function validateUser(user: unknown, index: number): RobloxUser {
 
 export function validateUserList(value: unknown): RobloxUserList {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error("The JSON must be an object.");
+    throw new Error("Invalid JSON.");
   }
   const record = value as Record<string, unknown>;
   if (!Array.isArray(record.roblox_users)) {
-    throw new Error("The JSON must contain a roblox_users array.");
+    throw new Error("Missing roblox_users list.");
   }
   if (Object.keys(record).some((key) => key !== "roblox_users")) {
-    throw new Error("The root JSON object contains an unsupported field.");
+    throw new Error("Invalid JSON field.");
   }
 
   return { roblox_users: record.roblox_users.map(validateUser) };
@@ -68,7 +68,7 @@ function parseUserList(content: string) {
   try {
     return validateUserList(JSON.parse(content));
   } catch (error) {
-    if (error instanceof SyntaxError) throw new Error("The user-list file contains invalid JSON.");
+    if (error instanceof SyntaxError) throw new Error("Invalid user list.");
     throw error;
   }
 }
@@ -80,7 +80,7 @@ async function readFile() {
     ref: config.GITHUB_BRANCH
   });
   if (Array.isArray(data) || data.type !== "file" || !("content" in data)) {
-    throw new Error(`User-list path '${config.TRACKING_FILE}' is not a text file.`);
+    throw new Error("User list unavailable.");
   }
   return { list: parseUserList(decodeFile(data.content)), sha: data.sha };
 }
@@ -116,7 +116,7 @@ async function updateUserList(
       if (!isConflict(error) || attempt === 2) throw error;
     }
   }
-  throw new Error("GitHub update conflicted too many times.");
+  throw new Error("Update conflict. Try again.");
 }
 
 export function addRobloxUser(user: RobloxUser) {
@@ -132,7 +132,7 @@ export function removeExactRobloxUser(user: RobloxUser) {
       entry.roblox_user_id === user.roblox_user_id &&
       entry.roblox_username === user.roblox_username
     );
-    if (index === -1) throw new Error("That user is no longer in the JSON list.");
+    if (index === -1) throw new Error("User not in list.");
     list.roblox_users.splice(index, 1);
     return list;
   }, `Remove Roblox user ${user.roblox_username ?? user.roblox_user_id}`);
