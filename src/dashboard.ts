@@ -60,6 +60,7 @@ export function profileConfirmation(profile: RobloxProfile) {
     .setTitle("Verify Roblox User")
     .setURL(profile.profileUrl)
     .setDescription(`[Open this profile on Roblox](${profile.profileUrl}) before adding it.`)
+    .setThumbnail(profile.imageUrl)
     .addFields(
       { name: "Username", value: profile.username, inline: true },
       { name: "Display Name", value: profile.displayName, inline: true },

@@ -3,6 +3,7 @@ export type RobloxProfile = {
   username: string;
   displayName: string;
   profileUrl: string;
+  imageUrl: string;
 };
 
 type RobloxUserResponse = {
@@ -13,6 +14,13 @@ type RobloxUserResponse = {
 
 type UsernameLookupResponse = {
   data?: RobloxUserResponse[];
+};
+
+type ThumbnailLookupResponse = {
+  data?: Array<{
+    state?: string;
+    imageUrl?: string;
+  }>;
 };
 
 async function fetchRoblox(url: string, init?: RequestInit) {
@@ -49,6 +57,19 @@ async function getByUsername(username: string): Promise<RobloxUserResponse> {
   return user;
 }
 
+async function getAvatarHeadshot(userId: string): Promise<string> {
+  const url = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=420x420&format=Png&isCircular=false`;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const response = await fetchRoblox(url);
+    if (!response.ok) throw new Error("Roblox could not load that profile image.");
+    const result = await response.json() as ThumbnailLookupResponse;
+    const thumbnail = result.data?.[0];
+    if (thumbnail?.state === "Completed" && thumbnail.imageUrl) return thumbnail.imageUrl;
+    if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error("Roblox could not load that profile image. Try again in a moment.");
+}
+
 export async function resolveRobloxUser(
   usernameInput: string | null,
   userIdInput: string | null
@@ -60,18 +81,25 @@ export async function resolveRobloxUser(
   let profile: RobloxUserResponse;
   if (userId) {
     profile = await getById(userId);
-    if (username && profile.name.toLowerCase() !== username.toLowerCase()) {
-      throw new Error("The username and user ID belong to different Roblox profiles.");
-    }
   } else {
     profile = await getByUsername(username!);
     profile = await getById(String(profile.id));
   }
 
+  if (username && profile.name !== username) {
+    if (profile.name.toLowerCase() === username.toLowerCase()) {
+      throw new Error(`Username capitalization must exactly match Roblox: ${profile.name}`);
+    }
+    throw new Error("The username and user ID belong to different Roblox profiles.");
+  }
+
+  const id = String(profile.id);
+
   return {
-    id: String(profile.id),
+    id,
     username: profile.name,
     displayName: profile.displayName,
-    profileUrl: `https://www.roblox.com/users/${profile.id}/profile`
+    profileUrl: `https://www.roblox.com/users/${id}/profile`,
+    imageUrl: await getAvatarHeadshot(id)
   };
 }
