@@ -8,6 +8,7 @@ import {
   TextInputStyle
 } from "discord.js";
 import type { RobloxUserList } from "./github.js";
+import type { RobloxProfile } from "./roblox.js";
 
 const colors = {
   normal: 0x5865f2,
@@ -51,6 +52,37 @@ export function dashboardMessage(list: RobloxUserList, notice?: string) {
   );
 
   return { embeds: [embed], components: [primary] };
+}
+
+export function profileConfirmation(profile: RobloxProfile) {
+  const embed = new EmbedBuilder()
+    .setColor(colors.normal)
+    .setTitle("Verify Roblox User")
+    .setURL(profile.profileUrl)
+    .setDescription(`[Open this profile on Roblox](${profile.profileUrl}) before adding it.`)
+    .addFields(
+      { name: "Username", value: profile.username, inline: true },
+      { name: "Display Name", value: profile.displayName, inline: true },
+      { name: "User ID", value: profile.id, inline: true }
+    )
+    .setFooter({ text: "The user is not added until you press Confirm Add." });
+
+  const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`users:confirm-add:${profile.id}:${profile.username}`)
+      .setLabel("Confirm Add")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setLabel("Open Roblox Profile")
+      .setStyle(ButtonStyle.Link)
+      .setURL(profile.profileUrl),
+    new ButtonBuilder()
+      .setCustomId("users:cancel-add")
+      .setLabel("Cancel")
+      .setStyle(ButtonStyle.Secondary)
+  );
+
+  return { embeds: [embed], components: [actions] };
 }
 
 function input(

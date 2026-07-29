@@ -10,6 +10,8 @@ At least one of `username` or `user_id` must be supplied. The bot displays `Addi
 
 Run `/users` to open an ephemeral embedded control panel showing the current list. Its buttons support adding, editing, and removing numbered entries, refreshing the display, and editing the complete JSON document in a Discord form. Full-document editing is limited by Discord to 4,000 characters.
 
+Adding a user is a two-step process. The bot first verifies the submitted username or user ID against Roblox, shows the canonical profile in an embed with a Roblox profile link, and only writes both the canonical username and ID to GitHub after **Confirm Add** is pressed. Invalid or mismatched profiles cannot be confirmed.
+
 ## Configuration
 
 1. Install Node.js 20 or newer.

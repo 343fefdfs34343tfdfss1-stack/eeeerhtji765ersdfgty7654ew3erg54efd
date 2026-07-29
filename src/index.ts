@@ -20,9 +20,11 @@ import {
   dashboardMessage,
   editUserModal,
   fullJsonModal,
+  profileConfirmation,
   removeUserModal,
   statusEmbed
 } from "./dashboard.js";
+import { resolveRobloxUser } from "./roblox.js";
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -61,22 +63,33 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
 
       if (interaction.commandName === "add" && interaction.options.getSubcommand() === "user") {
-        const user = makeRobloxUser(
-          interaction.options.getString("username"),
-          interaction.options.getString("user_id")
-        );
+        const username = interaction.options.getString("username");
+        const userId = interaction.options.getString("user_id");
+        makeRobloxUser(username, userId);
         await interaction.reply({
-          embeds: [statusEmbed("Adding User", "Updating the GitHub JSON list…")],
+          embeds: [statusEmbed("Checking Roblox", "Verifying the profile before it can be added…")],
           ephemeral: true
         });
-        const list = await addRobloxUser(user);
-        await interaction.editReply(dashboardMessage(list, "User added successfully."));
+        const profile = await resolveRobloxUser(username, userId);
+        await interaction.editReply(profileConfirmation(profile));
       }
       return;
     }
 
     if (interaction.isButton()) {
-      if (interaction.customId === "users:add") {
+      if (interaction.customId.startsWith("users:confirm-add:")) {
+        const [, , userId, username] = interaction.customId.split(":");
+        if (!userId || !username) throw new Error("This confirmation is invalid. Start again.");
+        await interaction.deferUpdate();
+        const profile = await resolveRobloxUser(username, userId);
+        const list = await addRobloxUser(makeRobloxUser(profile.username, profile.id));
+        await interaction.editReply(dashboardMessage(list, "Verified Roblox user added successfully."));
+      } else if (interaction.customId === "users:cancel-add") {
+        await interaction.update({
+          embeds: [statusEmbed("Add Cancelled", "No changes were made to the GitHub JSON list.")],
+          components: []
+        });
+      } else if (interaction.customId === "users:add") {
         await interaction.showModal(addUserModal());
       } else if (interaction.customId === "users:edit") {
         await interaction.showModal(editUserModal());
@@ -95,13 +108,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (!interaction.customId.startsWith("users:")) return;
 
       if (interaction.customId === "users:add-modal") {
-        const user = makeRobloxUser(
-          interaction.fields.getTextInputValue("username"),
-          interaction.fields.getTextInputValue("user_id")
-        );
+        const username = interaction.fields.getTextInputValue("username");
+        const userId = interaction.fields.getTextInputValue("user_id");
+        makeRobloxUser(username, userId);
         await interaction.deferReply({ ephemeral: true });
-        const list = await addRobloxUser(user);
-        await interaction.editReply(dashboardMessage(list, "User added successfully."));
+        const profile = await resolveRobloxUser(username, userId);
+        await interaction.editReply(profileConfirmation(profile));
       } else if (interaction.customId === "users:edit-modal") {
         const index = entryIndex(interaction.fields.getTextInputValue("entry"));
         const user = makeRobloxUser(
