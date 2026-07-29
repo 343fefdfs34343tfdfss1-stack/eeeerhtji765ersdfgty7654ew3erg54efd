@@ -64,7 +64,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isChatInputCommand()) {
       if (interaction.commandName === "users") {
         await interaction.deferReply({ ephemeral: true });
-        await interaction.editReply(dashboardMessage(await getRobloxUsers()));
+        await interaction.editReply(await dashboardMessage(await getRobloxUsers()));
         return;
       }
 
@@ -113,7 +113,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         await interaction.deferUpdate();
         const profile = await resolveRobloxUser(username, userId);
         const list = await addRobloxUser(makeRobloxUser(profile.username, profile.id));
-        await interaction.editReply(dashboardMessage(list, "Verified Roblox user added successfully."));
+        await interaction.editReply(await dashboardMessage(list, "Verified Roblox user added successfully."));
       } else if (interaction.customId === "users:cancel-add") {
         await interaction.update({
           embeds: [statusEmbed("Add Cancelled", "No changes were made to the GitHub JSON list.")],
@@ -127,9 +127,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
         await interaction.showModal(removeUserModal());
       } else if (interaction.customId === "users:json") {
         await interaction.showModal(fullJsonModal(await getRobloxUsers()));
-      } else if (interaction.customId === "users:refresh") {
+      } else if (interaction.customId.startsWith("users:page:")) {
+        const page = Number(interaction.customId.split(":")[2]);
+        if (!Number.isInteger(page)) throw new Error("That list page is invalid.");
         await interaction.deferUpdate();
-        await interaction.editReply(dashboardMessage(await getRobloxUsers(), "List refreshed."));
+        await interaction.editReply(await dashboardMessage(await getRobloxUsers(), undefined, page));
+      } else if (interaction.customId.startsWith("users:refresh:")) {
+        const page = Number(interaction.customId.split(":")[2]);
+        if (!Number.isInteger(page)) throw new Error("That list page is invalid.");
+        await interaction.deferUpdate();
+        await interaction.editReply(await dashboardMessage(await getRobloxUsers(), "List refreshed.", page));
       }
       return;
     }
@@ -163,12 +170,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
         );
         await interaction.deferReply({ ephemeral: true });
         const list = await editRobloxUser(index, user);
-        await interaction.editReply(dashboardMessage(list, `Entry ${index + 1} updated successfully.`));
+        await interaction.editReply(await dashboardMessage(list, `Entry ${index + 1} updated successfully.`));
       } else if (interaction.customId === "users:remove-modal") {
         const index = entryIndex(interaction.fields.getTextInputValue("entry"));
         await interaction.deferReply({ ephemeral: true });
         const list = await removeRobloxUser(index);
-        await interaction.editReply(dashboardMessage(list, `Entry ${index + 1} removed successfully.`));
+        await interaction.editReply(await dashboardMessage(list, `Entry ${index + 1} removed successfully.`));
       } else if (interaction.customId === "users:json-modal") {
         let parsed: unknown;
         try {
@@ -179,7 +186,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const replacement = validateUserList(parsed);
         await interaction.deferReply({ ephemeral: true });
         const list = await replaceRobloxUsers(replacement);
-        await interaction.editReply(dashboardMessage(list, "Complete JSON updated successfully."));
+        await interaction.editReply(await dashboardMessage(list, "Complete JSON updated successfully."));
       }
     }
   } catch (error) {

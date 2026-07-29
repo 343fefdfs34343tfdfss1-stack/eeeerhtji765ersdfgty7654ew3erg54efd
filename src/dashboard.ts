@@ -8,7 +8,7 @@ import {
   TextInputStyle
 } from "discord.js";
 import type { RobloxUserList } from "./github.js";
-import type { RobloxProfile } from "./roblox.js";
+import { previewStoredRobloxUser, type RobloxProfile } from "./roblox.js";
 
 const colors = {
   normal: 0x5865f2,
@@ -23,35 +23,55 @@ export function statusEmbed(title: string, description: string, error = false) {
     .setDescription(description);
 }
 
-export function dashboardMessage(list: RobloxUserList, notice?: string) {
-  const lines = list.roblox_users.map((user, index) => {
-    const username = user.roblox_username ? `Username: \`${user.roblox_username}\`` : "";
-    const userId = user.roblox_user_id ? `ID: \`${user.roblox_user_id}\`` : "";
-    return `**${index + 1}.** ${[username, userId].filter(Boolean).join("  •  ")}`;
+export async function dashboardMessage(list: RobloxUserList, notice?: string, requestedPage = 0) {
+  const pageSize = 10;
+  const pageCount = Math.max(1, Math.ceil(list.roblox_users.length / pageSize));
+  const page = Math.max(0, Math.min(requestedPage, pageCount - 1));
+  const start = page * pageSize;
+  const users = list.roblox_users.slice(start, start + pageSize);
+  const profiles = await Promise.all(users.map((user) =>
+    previewStoredRobloxUser(user.roblox_username, user.roblox_user_id)
+  ));
+  const embeds = profiles.map((profile, index) => {
+    const author = {
+      name: `${start + index + 1}. ${profile.username}  •  User ID: ${profile.id}`,
+      ...(profile.imageUrl ? { iconURL: profile.imageUrl } : {}),
+      ...(profile.profileUrl ? { url: profile.profileUrl } : {})
+    };
+    return new EmbedBuilder()
+      .setColor(profile.verified ? colors.normal : colors.error)
+      .setAuthor(author);
   });
-
-  let description = lines.length ? lines.join("\n") : "*No Roblox users have been added yet.*";
-  if (description.length > 3800) {
-    description = `${description.slice(0, 3750)}\n\n*List shortened in this view. Use Edit Full JSON to access the complete file.*`;
+  if (embeds.length === 0) {
+    embeds.push(statusEmbed("Roblox User List", notice ?? "No Roblox users have been added yet."));
   }
-
-  const embed = new EmbedBuilder()
-    .setColor(colors.normal)
-    .setTitle("Roblox User List")
-    .setDescription(description)
-    .addFields({ name: "Entries", value: String(list.roblox_users.length), inline: true })
-    .setFooter({ text: "Use the buttons below to manage the GitHub JSON file." });
-  if (notice) embed.addFields({ name: "Status", value: notice });
 
   const primary = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder().setCustomId("users:add").setLabel("Add User").setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId("users:edit").setLabel("Edit User").setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId("users:remove").setLabel("Remove User").setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId("users:json").setLabel("Edit Full JSON").setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId("users:refresh").setLabel("Refresh").setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId(`users:refresh:${page}`).setLabel("Refresh").setStyle(ButtonStyle.Secondary)
+  );
+  const navigation = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`users:page:${page - 1}`)
+      .setLabel("Previous")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page === 0),
+    new ButtonBuilder()
+      .setCustomId(`users:page:${page}`)
+      .setLabel(`${notice ? `${notice} • ` : ""}Page ${page + 1}/${pageCount}`.slice(0, 80))
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId(`users:page:${page + 1}`)
+      .setLabel("Next")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page === pageCount - 1)
   );
 
-  return { embeds: [embed], components: [primary] };
+  return { embeds, components: [primary, navigation] };
 }
 
 export function profileConfirmation(profile: RobloxProfile) {
