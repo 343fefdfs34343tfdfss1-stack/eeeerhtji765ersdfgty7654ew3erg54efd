@@ -3,14 +3,14 @@
 This Discord bot provides one administrator-only slash command:
 
 ```text
-/add user username:<optional Roblox username> user_id:<optional Roblox user ID>
+/users
 ```
 
-At least one of `username` or `user_id` must be supplied. The bot displays `Adding User`, appends the user object to the `roblox_users` JSON array in the configured GitHub file, and then displays `User Added`.
+All user management starts from the embedded `/users` panel. No separate add or remove slash commands are registered. Add cancellation and successful removal return to the main panel, while removal screens and workflow errors include **Back to Users**.
 
-Run `/users` to open an ephemeral embedded control panel using the same compact, linked avatar boxes and pagination as `/remove user`. **Add User** uses the verified Roblox profile preview with Add/Cancel, and **Remove User** opens the same avatar list, dropdown, and Remove/Cancel flow as `/remove user`. The panel also supports refreshing and editing the complete JSON document. Full-document editing is limited by Discord to 4,000 characters.
+Run `/users` to open an ephemeral embedded control panel with compact, linked avatar boxes and pagination. **Add User** uses the verified Roblox profile preview with Add/Cancel, and **Remove User** opens the avatar list, dropdown, and Remove/Cancel flow. The panel also supports refreshing and editing the complete JSON document. Full-document editing is limited by Discord to 4,000 characters.
 
-Run `/remove user` to open a compact, paginated removal list. Each equal-sized entry uses the stored user ID first and then the username to resolve the Roblox avatar and a hyperlinked username/ID line. Legacy username casing is canonicalized for display, while `/add user` remains strictly case-sensitive. Choose a user from the dropdown, then press **Remove** or **Cancel**.
+The removal menu uses equal-sized entries and tries the stored user ID first, followed by the username, to resolve the Roblox avatar and hyperlinked username/ID line. Legacy username casing is canonicalized for display, while adding remains strictly case-sensitive.
 
 Adding a user is a two-step process. The bot first verifies the submitted username or user ID against Roblox, then shows the canonical profile and avatar headshot in a clickable embed with exactly **Add** and **Cancel** buttons. Usernames are case-sensitive and must exactly match Roblox's canonical capitalization. It only writes both the canonical username and ID to GitHub after **Add** is pressed. If no exact profile is found, the bot returns an error embed instead.
 
@@ -20,7 +20,7 @@ Adding a user is a two-step process. The bot first verifies the submitted userna
 2. Copy `.env.example` to `.env`.
 3. Fill in the Discord bot token, application ID, testing server ID, and a fine-grained GitHub token.
 4. Limit the GitHub token to this repository with **Contents: read/write** permission.
-5. Optionally set `ALLOWED_ROLE_IDS` to a comma-separated list of Discord role IDs. If it is empty, only server administrators can run `/track`.
+5. Optionally set `ALLOWED_ROLE_IDS` to a comma-separated list of Discord role IDs. If it is empty, only server administrators can run `/users`.
 
 For the current project:
 

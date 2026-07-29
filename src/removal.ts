@@ -9,7 +9,7 @@ import {
 import type { RobloxUser, RobloxUserList } from "./github.js";
 import { validateUserList } from "./github.js";
 import { previewStoredRobloxUser, type StoredRobloxProfile } from "./roblox.js";
-import { statusEmbed } from "./dashboard.js";
+import { homeButtonRow, statusEmbed } from "./dashboard.js";
 
 const PAGE_SIZE = 10;
 
@@ -54,7 +54,7 @@ export async function removalListMessage(list: RobloxUserList, requestedPage = 0
   if (list.roblox_users.length === 0) {
     return {
       embeds: [statusEmbed("Roblox User List", notice ?? "There are no users to remove.")],
-      components: []
+      components: [homeButtonRow()]
     };
   }
 
@@ -91,7 +91,11 @@ export async function removalListMessage(list: RobloxUserList, requestedPage = 0
       .setCustomId(`remove:list:${page + 1}`)
       .setLabel("Next")
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(page === pageCount - 1)
+      .setDisabled(page === pageCount - 1),
+    new ButtonBuilder()
+      .setCustomId("users:home")
+      .setLabel("Back to Users")
+      .setStyle(ButtonStyle.Primary)
   );
 
   return { embeds, components: [selectRow, navigation] };
@@ -111,7 +115,11 @@ export async function removalConfirmation(user: RobloxUser, page: number) {
     new ButtonBuilder()
       .setCustomId(`remove:cancel:${page}`)
       .setLabel("Cancel")
-      .setStyle(ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("users:home")
+      .setLabel("Back to Users")
+      .setStyle(ButtonStyle.Primary)
   );
   return { embeds: [embed], components: [actions] };
 }

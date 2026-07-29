@@ -23,6 +23,15 @@ export function statusEmbed(title: string, description: string, error = false) {
     .setDescription(description);
 }
 
+export function homeButtonRow() {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId("users:home")
+      .setLabel("Back to Users")
+      .setStyle(ButtonStyle.Primary)
+  );
+}
+
 export async function dashboardMessage(list: RobloxUserList, notice?: string, requestedPage = 0) {
   const pageSize = 10;
   const pageCount = Math.max(1, Math.ceil(list.roblox_users.length / pageSize));

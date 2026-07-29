@@ -18,6 +18,7 @@ import {
   addUserModal,
   dashboardMessage,
   fullJsonModal,
+  homeButtonRow,
   profileConfirmation,
   statusEmbed
 } from "./dashboard.js";
@@ -58,28 +59,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
         return;
       }
 
-      if (interaction.commandName === "remove" && interaction.options.getSubcommand() === "user") {
-        await interaction.deferReply({ ephemeral: true });
-        await interaction.editReply(await removalListMessage(await getRobloxUsers()));
-        return;
-      }
-
-      if (interaction.commandName === "add" && interaction.options.getSubcommand() === "user") {
-        const username = interaction.options.getString("username");
-        const userId = interaction.options.getString("user_id");
-        makeRobloxUser(username, userId);
-        await interaction.reply({
-          embeds: [statusEmbed("Checking Roblox", "Verifying the profile before it can be added…")],
-          ephemeral: true
-        });
-        const profile = await resolveRobloxUser(username, userId);
-        await interaction.editReply(profileConfirmation(profile));
-      }
       return;
     }
 
     if (interaction.isButton()) {
-      if (interaction.customId.startsWith("remove:list:")) {
+      if (interaction.customId === "users:home") {
+        await interaction.deferUpdate();
+        await interaction.editReply(await dashboardMessage(await getRobloxUsers()));
+      } else if (interaction.customId.startsWith("remove:list:")) {
         const page = Number(interaction.customId.split(":")[2]);
         if (!Number.isInteger(page)) throw new Error("That list page is invalid.");
         await interaction.deferUpdate();
@@ -96,7 +83,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const user = decodeRemovalUser(identity);
         await interaction.deferUpdate();
         const list = await removeExactRobloxUser(user);
-        await interaction.editReply(await removalListMessage(list, page, "User removed successfully."));
+        await interaction.editReply(await dashboardMessage(list, "User removed successfully."));
       } else if (interaction.customId.startsWith("users:confirm-add:")) {
         const [, , userId, username] = interaction.customId.split(":");
         if (!userId || !username) throw new Error("This confirmation is invalid. Start again.");
@@ -105,10 +92,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const list = await addRobloxUser(makeRobloxUser(profile.username, profile.id));
         await interaction.editReply(await dashboardMessage(list, "Verified Roblox user added successfully."));
       } else if (interaction.customId === "users:cancel-add") {
-        await interaction.update({
-          embeds: [statusEmbed("Add Cancelled", "No changes were made to the GitHub JSON list.")],
-          components: []
-        });
+        await interaction.deferUpdate();
+        await interaction.editReply(await dashboardMessage(await getRobloxUsers(), "Add cancelled."));
       } else if (interaction.customId === "users:add") {
         await interaction.showModal(addUserModal());
       } else if (interaction.customId === "users:remove") {
@@ -167,7 +152,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
   } catch (error) {
     console.error(error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    const response = { embeds: [statusEmbed("Unable to Update List", message.slice(0, 3900), true)], components: [] };
+    const response = {
+      embeds: [statusEmbed("Unable to Update List", message.slice(0, 3900), true)],
+      components: [homeButtonRow()]
+    };
     if (interaction.replied || interaction.deferred) await interaction.editReply(response);
     else await interaction.reply({ ...response, ephemeral: true });
   }
