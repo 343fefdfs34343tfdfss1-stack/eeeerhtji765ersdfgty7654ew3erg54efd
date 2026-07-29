@@ -116,15 +116,25 @@ export async function previewStoredRobloxUser(
   username: string | undefined,
   userId: string | undefined
 ): Promise<StoredRobloxProfile> {
-  try {
-    const profile = await resolveRobloxUser(username ?? null, userId ?? null);
-    return { ...profile, verified: true };
-  } catch {
-    return {
-      id: userId ?? "Unknown",
-      username: username ?? "Unknown",
-      ...(userId ? { profileUrl: `https://www.roblox.com/users/${userId}/profile` } : {}),
-      verified: false
-    };
+  if (userId) {
+    try {
+      const profile = await resolveRobloxUser(null, userId);
+      return { ...profile, verified: true };
+    } catch {
+      // Try the stored username independently below.
+    }
   }
+  if (username) {
+    try {
+      const profile = await resolveRobloxUser(username, null);
+      return { ...profile, verified: true };
+    } catch {
+      // Keep the invalid legacy entry visible so it can still be removed.
+    }
+  }
+  return {
+    id: userId ?? "Unknown",
+    username: username ?? "Unknown",
+    verified: false
+  };
 }

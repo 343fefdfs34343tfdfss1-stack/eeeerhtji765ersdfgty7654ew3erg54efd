@@ -64,17 +64,14 @@ export async function removalListMessage(list: RobloxUserList, requestedPage = 0
     previewStoredRobloxUser(user.roblox_username, user.roblox_user_id)
   ));
   const embeds = profiles.map((profile, index) => compactUserEmbed(profile, start + index + 1));
-  embeds[embeds.length - 1].setFooter({
-    text: `${notice ? `${notice} • ` : ""}Page ${page + 1}/${pageCount} • ${list.roblox_users.length} users`
-  });
 
   const selector = new StringSelectMenuBuilder()
     .setCustomId(`remove:select:${page}`)
-    .setPlaceholder("Choose a user to remove")
+    .setPlaceholder(`${notice ? `${notice} • ` : ""}Page ${page + 1}/${pageCount} • Choose a user`)
     .addOptions(users.map((user, index) =>
       new StringSelectMenuOptionBuilder()
-        .setLabel(user.roblox_username ?? `User ${start + index + 1}`)
-        .setDescription(`User ID: ${user.roblox_user_id ?? "Unknown"}`)
+        .setLabel(profiles[index].username ?? `User ${start + index + 1}`)
+        .setDescription(`User ID: ${profiles[index].id}`)
         .setValue(encodeUser(user))
     ));
   const selectRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selector);
