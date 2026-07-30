@@ -13,6 +13,11 @@ export type RobloxUserList = {
   roblox_users: RobloxUser[];
 };
 
+export type RobloxUserSnapshot = {
+  list: RobloxUserList;
+  sha: string;
+};
+
 function isConflict(error: unknown) {
   return typeof error === "object" && error !== null && "status" in error &&
     (error as { status?: number }).status === 409;
@@ -77,7 +82,7 @@ function parseUserList(content: string) {
   }
 }
 
-async function readFile() {
+async function readFile(): Promise<RobloxUserSnapshot> {
   const { data } = await github.repos.getContent({
     ...repository,
     path: config.TRACKING_FILE,
@@ -93,12 +98,20 @@ export async function getRobloxUsers(): Promise<RobloxUserList> {
   return (await readFile()).list;
 }
 
+export function getRobloxUsersSnapshot(): Promise<RobloxUserSnapshot> {
+  return readFile();
+}
+
 async function updateUserList(
   change: (list: RobloxUserList) => RobloxUserList,
-  message: string
+  message: string,
+  expectedSha?: string
 ): Promise<RobloxUserList> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const { list, sha } = await readFile();
+    if (expectedSha && sha !== expectedSha) {
+      throw new Error("JSON changed. Reopen Edit JSON.");
+    }
     const updatedList = validateUserList(change(structuredClone(list)));
     if (sameList(list, updatedList)) return updatedList;
     const updated = `${JSON.stringify(updatedList, null, 2)}\n`;
@@ -123,6 +136,9 @@ async function updateUserList(
         if (sameList(latest.list, updatedList)) return latest.list;
       } catch {
         // Keep the original update result.
+      }
+      if (isConflict(error) && expectedSha) {
+        throw new Error("JSON changed. Reopen Edit JSON.");
       }
       if (isConflict(error) && attempt < 2) continue;
       if (isConflict(error)) throw new Error("Update conflict. Try again.");
@@ -160,6 +176,6 @@ export function removeExactRobloxUser(user: RobloxUser) {
   }, `Remove Roblox user ${user.roblox_username ?? user.roblox_user_id}`);
 }
 
-export function replaceRobloxUsers(list: RobloxUserList) {
-  return updateUserList(() => list, "Edit complete Roblox user JSON list");
+export function replaceRobloxUsers(list: RobloxUserList, expectedSha: string) {
+  return updateUserList(() => list, "Edit complete Roblox user JSON list", expectedSha);
 }

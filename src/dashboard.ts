@@ -149,7 +149,7 @@ export function addUserModal() {
     );
 }
 
-export function fullJsonModal(list: RobloxUserList) {
+export function fullJsonModal(list: RobloxUserList, revision: string) {
   const json = JSON.stringify(list, null, 2);
   if (json.length > 4000) {
     throw new Error("JSON too large.");
@@ -162,7 +162,7 @@ export function fullJsonModal(list: RobloxUserList) {
     .setMaxLength(4000)
     .setValue(json);
   return new ModalBuilder()
-    .setCustomId("users:json-modal")
+    .setCustomId(`users:json-modal:${revision}:${Date.now().toString(36)}`)
     .setTitle("Edit JSON")
     .addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(jsonInput));
 }

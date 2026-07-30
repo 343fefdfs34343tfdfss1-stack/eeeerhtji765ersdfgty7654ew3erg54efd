@@ -10,6 +10,7 @@ import { config } from "./config.js";
 import {
   addRobloxUser,
   getRobloxUsers,
+  getRobloxUsersSnapshot,
   removeExactRobloxUser,
   replaceRobloxUsers,
   validateUserList
@@ -120,7 +121,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
         await interaction.editReply(loadingMessage("Remove User"));
         await interaction.editReply(await removalListMessage(await getRobloxUsers()));
       } else if (interaction.customId === "users:json") {
-        await interaction.showModal(fullJsonModal(await getRobloxUsers()));
+        const snapshot = await getRobloxUsersSnapshot();
+        await interaction.showModal(fullJsonModal(snapshot.list, snapshot.sha));
       } else if (interaction.customId.startsWith("users:page:")) {
         const page = Number(interaction.customId.split(":")[2]);
         if (!Number.isInteger(page)) throw new Error("Invalid page.");
@@ -158,7 +160,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
         await interaction.editReply(loadingMessage("Add User"));
         const profile = await resolveRobloxUser(username, userId);
         await interaction.editReply(profileConfirmation(profile));
-      } else if (interaction.customId === "users:json-modal") {
+      } else if (interaction.customId.startsWith("users:json-modal:")) {
+        const revision = interaction.customId.split(":")[2];
+        if (!revision || !/^[0-9a-f]{40}$/i.test(revision)) {
+          throw new Error("Invalid JSON version.");
+        }
         let parsed: unknown;
         try {
           parsed = JSON.parse(interaction.fields.getTextInputValue("json"));
@@ -169,7 +175,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         if (interaction.isFromMessage()) await interaction.deferUpdate();
         else await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         await interaction.editReply(loadingMessage("Edit JSON"));
-        const list = await replaceRobloxUsers(replacement);
+        const list = await replaceRobloxUsers(replacement, revision);
         await interaction.editReply(await dashboardMessage(list, "JSON updated."));
       }
     }
